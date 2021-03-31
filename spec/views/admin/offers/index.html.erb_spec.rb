@@ -15,11 +15,11 @@ describe 'admin/offers/index.html.erb', type: :feature do
       allow(Convection.config).to receive(:gravity_xapp_token).and_return(
         'xapp_token'
       )
-      gravql_artists_response = {
+      @gravql_artists_response = {
         data: { artists: [{ id: 'artist1', name: 'Andy Warhol' }] }
       }
       stub_request(:post, "#{Convection.config.gravity_api_url}/graphql")
-        .to_return(body: gravql_artists_response.to_json).with(
+        .to_return(body: @gravql_artists_response.to_json).with(
         headers: {
           'X-XAPP-TOKEN' => 'xapp_token', 'Content-Type' => 'application/json'
         }
@@ -182,12 +182,26 @@ describe 'admin/offers/index.html.erb', type: :feature do
         expect(page).to have_selector('.list-group-item', count: 2)
       end
 
+      it 'allows you to search by artist name', js: true do
+        artist = @gravql_artists_response.first
+        @offer1.submission.update!(artist_id: artist.id)
+
+        fill_in('term', with: artist.name[0...5])
+        expect(page).to have_selector('.ui-autocomplete')
+        expect(page).to have_content(artist.name)
+        click_link("artist-#{artist.id}")
+        expect(current_url).to include "&artist=#{artist.id}"
+        expect(page).to have_selector("input[value='#{artist.name}']")
+        expect(page).to have_selector('.list-group-item', count: 1)
+      end
+
       it 'lets you search by partner name', js: true do
         fill_in('term', with: 'Gag')
         expect(page).to have_selector('.ui-autocomplete')
         expect(page).to have_content('Partner   Gagosian')
         click_link("partner-#{@partner1.id}")
         expect(current_url).to include "&partner=#{@partner1.id}"
+        expect(page).to have_selector("input[value='#{@partner1.name}']")
         expect(page).to have_selector('.list-group-item', count: 5)
         expect(page).to have_content('sent', count: 5) # 3 items + "sent" and "sent with response" filters
         expect(page).to have_content('draft', count: 2)
@@ -207,6 +221,7 @@ describe 'admin/offers/index.html.erb', type: :feature do
         expect(page).to have_content('Partner   Gagosian')
         click_link("partner-#{@partner1.id}")
         expect(current_url).to include "state=sent&partner=#{@partner1.id}"
+        expect(page).to have_selector("input[value='#{@partner1.name}']")
         expect(page).to have_selector('.list-group-item', count: 4)
         expect(page).to have_content('sent', count: 5) # 3 items + "sent" and "sent with response" filters
         expect(page).to have_content('draft', count: 1)
@@ -220,6 +235,7 @@ describe 'admin/offers/index.html.erb', type: :feature do
         expect(page).to have_content('Partner   Gagosian')
         click_link("partner-#{@partner1.id}")
         expect(current_url).to include "state=sent&partner=#{@partner1.id}"
+        expect(page).to have_selector("input[value='#{@partner1.name}']")
         click_link('Estimate')
         expect(current_url).to include(
           "partner=#{@partner1.id}",
@@ -227,6 +243,7 @@ describe 'admin/offers/index.html.erb', type: :feature do
           'sort=offers.low_estimate_cents',
           'direction=desc'
         )
+        expect(page).to have_selector("input[value='#{@partner1.name}']")
       end
     end
   end

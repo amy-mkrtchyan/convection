@@ -124,7 +124,7 @@ describe 'admin/submissions/index.html.erb', type: :feature do
           title: 'blah blah'
         )
 
-        gravql_artists_response = {
+        @gravql_artists_response = {
           data: {
             artists: [
               { id: 'artistid', name: 'Andy Warhol' },
@@ -135,7 +135,7 @@ describe 'admin/submissions/index.html.erb', type: :feature do
           }
         }
         stub_request(:post, "#{Convection.config.gravity_api_url}/graphql")
-          .to_return(body: gravql_artists_response.to_json).with(
+          .to_return(body: @gravql_artists_response.to_json).with(
           headers: {
             'X-XAPP-TOKEN' => 'xapp_token', 'Content-Type' => 'application/json'
           }
@@ -169,6 +169,7 @@ describe 'admin/submissions/index.html.erb', type: :feature do
         expect(page).to have_selector('.ui-autocomplete')
         click_link("user-#{@user2.id}")
         expect(current_url).to include "state=draft&user=#{@user2.id}"
+        expect(page).to have_selector("input[value='#{@user2.email}']")
         expect(page).to have_selector('.list-group-item', count: 2)
         expect(page).to have_content('draft', count: 2)
       end
@@ -187,8 +188,23 @@ describe 'admin/submissions/index.html.erb', type: :feature do
         expect(page).to have_content('User   percy')
         click_link("user-#{@user2.id}")
         expect(current_url).to include "&user=#{@user2.id}"
+        expect(page).to have_selector("input[value='#{@user2.email}']")
         expect(page).to have_selector('.list-group-item', count: 4)
         expect(page).to have_content 'my work'
+        expect(page).to have_content 'blah blah'
+      end
+
+      it 'allows you to search by artist name', js: true do
+        artist = @gravql_artists_response.last
+
+        fill_in('term', with: artist.name[0...5])
+        expect(page).to have_selector('.ui-autocomplete')
+        expect(page).to have_content(artist.name)
+        click_link("artist-#{artist.id}")
+        expect(current_url).to include "&artist=#{artist.id}"
+        expect(page).to have_selector("input[value='#{artist.name}']")
+        expect(page).to have_selector('.list-group-item', count: 2)
+        expect(page).to have_content 'title'
         expect(page).to have_content 'blah blah'
       end
 
